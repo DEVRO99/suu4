@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="my">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Santa Bunny: Rooftop Parkour & Delivery</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background: #02060d;
+            font-family: 'Fredoka', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Phone View Frame Wrapper */
+        body.phone-mode {
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            padding: 12px;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            background: linear-gradient(180deg, #030914 0%, #0a1f3d 42%, #133e68 76%, #1e6091 100%);
+            transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Realistic Mobile Phone Frame when Phone Mode is toggled */
+        body.phone-mode #game-container {
+            width: min(412px, 96vw);
+            height: min(860px, 94dvh);
+            border-radius: 40px;
+            border: 10px solid #1e293b;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 0 2px #475569;
+        }
+
+        /* Subtle Phone Speaker Notch in Phone View */
+        .phone-notch {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 20px;
+            background: #1e293b;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        body.phone-mode .phone-notch {
+            display: block;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .top-ui {
+            position: absolute;
+            top: max(12px, env(safe-area-inset-top));
+            left: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        body.phone-mode .top-ui {
+            top: 24px;
+        }
+
+        .hud {
+            width: 100%;
+            max-width: 1020px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .badge {
+            background: rgba(7, 24, 48, 0.9);
+            border: 2px solid #38bdf8;
+            color: #f0f9ff;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: clamp(11.5px, 3.2vw, 13.5px);
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .badge.gold {
+            border-color: #fbbf24;
+            color: #fef08a;
+        }
+
+        .badge.danger {
+            border-color: #f43f5e;
+            color: #ffe4e6;
+            background: rgba(88, 13, 35, 0.9);
+            display: none;
+        }
+
+        /* Interactive Phone View Toggle Button */
+        #view-toggle-btn {
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(15, 23, 42, 0.92);
+            border: 2px solid #a855f7;
+            color: #f3e8ff;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: clamp(11.5px, 3vw, 13px);
+            font-weight: 700;
+            font-family: inherit;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+            transition: transform 0.12s ease, background 0.2s ease;
+        }
+
+        #view-toggle-btn:active {
+            transform: scale(0.92);
+        }
+
+        .buff-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+            min-height: 22px;
+        }
+
+        .buff-pill {
+            background: rgba(15, 23, 42, 0.92);
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .progress-wrap {
+            width: min(460px, 88%);
+            height: 11px;
+            background: rgba(6, 19, 38, 0.85);
+            border: 2px solid #7dd3fc;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #34d399, #fbbf24, #ef4444);
+            transition: width 0.12s linear;
+        }
+
+        #powerup-toast {
+            position: absolute;
+            top: 108px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(9, 30, 58, 0.95);
+            color: #ffffff;
+            border: 2.5px solid #fbbf24;
+            padding: 7px 14px;
+            border-radius: 999px;
+            font-size: clamp(11.5px, 3.2vw, 13.5px);
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 25;
+            max-width: 92%;
+            text-align: center;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+        }
+
+        /* Bottom Action Control (Right) */
+        .action-btn {
+            position: absolute;
+            bottom: max(20px, env(safe-area-inset-bottom));
+            right: 18px;
+            width: clamp(74px, 18vw, 88px);
+            height: clamp(74px, 18vw, 88px);
+            border: 4px solid #ffffff;
+            border-radius: 50%;
+            color: #ffffff;
+            font-size: clamp(11.5px, 3vw, 13px);
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 30;
+            transition: transform 0.1s, opacity 0.2s;
+            font-family: inherit;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            touch-action: manipulation;
+        }
+
+        .action-btn:active {
+            transform: scale(0.9);
+        }
+
+        #drop-btn {
+            background: radial-gradient(circle at 30% 30%, #fde047, #ef4444 55%, #991b1b 100%);
+            box-shadow: 0 8px 22px rgba(239, 68, 68, 0.65);
+        }
+
+        .action-btn.disabled {
+            background: rgba(30, 45, 65, 0.75) !important;
+            border-color: #64748b !important;
+            box-shadow: none !important;
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        #overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(4, 15, 30, 0.84);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            z-index: 40;
+            transition: opacity 0.3s ease;
+        }
+
+        .card {
+            background: #f0f9ff;
+            border: 5px solid #ef4444;
+            border-radius: 26px;
+            padding: 20px 16px;
+            max-width: 460px;
+            width: 100%;
+            max-height: 90%;
+            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
+            color: #0f172a;
+            transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+        }
+
+        /* Special Romantic Celebration Card State on Win */
+        .card.win-card {
+            background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 50%, #fce7f3 100%);
+            border: 5px solid #ec4899;
+            box-shadow: 0 0 35px rgba(236, 72, 153, 0.65), 0 18px 45px rgba(0, 0, 0, 0.75);
+            animation: popIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .card h1 {
+            font-size: clamp(18px, 4.8vw, 22px);
+            color: #b91c1c;
+            margin-bottom: 6px;
+            text-shadow: 0 2px 0 #fecaca;
+            line-height: 1.35;
+        }
+
+        .card.win-card h1 {
+            color: #be185d;
+            text-shadow: 0 2px 0 #fbcfe8;
+            font-size: clamp(19px, 5vw, 24px);
+        }
+
+        .love-banner {
+            display: none;
+            background: linear-gradient(135deg, #ec4899 0%, #e11d48 100%);
+            color: #ffffff;
+            padding: 12px 14px;
+            border-radius: 18px;
+            font-size: clamp(15px, 4.2vw, 18px);
+            font-weight: 700;
+            line-height: 1.5;
+            margin: 10px 0 12px;
+            box-shadow: 0 8px 20px rgba(225, 29, 72, 0.35);
+            border: 2px solid #fbcfe8;
+        }
+
+        .card.win-card .love-banner {
+            display: block;
+        }
+
+        #star-display {
+            font-size: clamp(22px, 6vw, 30px);
+            margin: 4px 0 8px;
+            letter-spacing: 2px;
+            display: none;
+            color: #d97706;
+            font-weight: 700;
+        }
+
+        .card p {
+            font-size: clamp(12px, 3.3vw, 13.5px);
+            line-height: 1.5;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+            text-align: left;
+            background: #e0f2fe;
+            padding: 9px 10px;
+            border-radius: 14px;
+            border: 2px dashed #0284c7;
+            font-size: clamp(11px, 2.9vw, 12px);
+        }
+
+        @media (max-width: 380px) {
+            .legend {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: #0c4a6e;
+        }
+
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid #fff;
+        }
+
+        .star-rules {
+            background: #0f172a;
+            color: #fef08a;
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-size: clamp(10.5px, 2.8vw, 11.5px);
+            margin-bottom: 12px;
+            line-height: 1.45;
+            border: 2px solid #38bdf8;
+        }
+
+        .btn {
+            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+            color: white;
+            border: 2px solid #fca5a5;
+            padding: 11px 30px;
+            border-radius: 999px;
+            font-size: clamp(15px, 4vw, 17px);
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #7f1d1d;
+            font-family: inherit;
+            transition: transform 0.1s;
+        }
+
+        .card.win-card .btn {
+            background: linear-gradient(180deg, #ec4899 0%, #be185d 100%);
+            border-color: #fbcfe8;
+            box-shadow: 0 5px 0 #831843;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #7f1d1d;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <div class="phone-notch"></div>
+
+        <div class="top-ui">
+            <div class="hud">
+                <div class="badge">🛷 <span id="score">0</span> / 4000m</div>
+                <div class="badge gold">🏠 ပို့ပြီး: <span id="delivered-count">0</span>/35 | 🎁 <span
+                        id="ammo-count">6</span></div>
+                <div class="badge danger" id="chaser-badge">👻 လိုက်နေပြီ: <span id="chaser-dist">0</span>m</div>
+                <button id="view-toggle-btn" title="Switch between Phone View and Fullscreen">📱 Phone View</button>
+            </div>
+            <div class="buff-row" id="buff-row"></div>
+            <div class="progress-wrap">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+
+        <div id="powerup-toast">🎄 Merry Christmas!</div>
+
+        <!-- Right Button: Drop Present -->
+        <button id="drop-btn" class="action-btn">
+            <span style="font-size:20px;">🎁</span>
+            <span>DROP</span>
+            <span id="drop-btn-count" style="font-size:11px;">(6)</span>
+        </button>
+
+        <div id="overlay">
+            <div class="card" id="modal-card">
+                <h1 id="modal-title">🛷 Santa Bunny: Rooftop Parkour 🎄</h1>
+                <div id="love-banner" class="love-banner">
+                    congratulations 🎉 နိုင်သွားပါပြီ ဆု 💕၊ အရမ်းချစ်တယ် babe 😘
+                </div>
+                <div id="star-display">⭐⭐⭐</div>
+                <p id="modal-desc">
+                    မီးခိုးခေါင်းတိုင်ပေါ်ရောက်ရင် <b>🎁 DROP</b> နှိပ်ပြီး လက်ဆောင်ချပေးရမယ်နော်!<br>
+                    <b>1500m</b> ရောက်ရင် လက်ဆောင်လိုက်လုမယ့် နှင်းသရဲ 👻 လိုက်လာလိမ့်မယ်!
+                </p>
+                <div class="legend" id="info-legend">
+                    <div class="legend-item"><span class="dot" style="background:#10b981"></span> 🧝 Elf ဦးထုပ်
+                        (Auto-Drop)</div>
+                    <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> 🎁 လက်ဆောင်ထုပ် (+3
+                        Ammo)</div>
+                </div>
+                <div class="star-rules" id="info-rules">
+                    🌟 <b>4000m Portal Goal & Star Rules (ပစ္စည်း 35 ခု):</b><br>
+                    အိမ် <b>35 လုံး</b> = ⭐⭐⭐ | <b>22 လုံး</b> = ⭐⭐ | <b>10 လုံး</b> = ⭐<br>
+                    👻 မီးခိုးခေါင်းတိုင်ထဲ လက်ဆောင်ဝင်တိုင်း သရဲက <b>20m</b> နောက်ပြန်ဆုတ်သွားမယ်နော်ဆု!
+                </div>
+                <button class="btn" id="start-btn">🛷 Start Rooftop Run</button>
+            </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreEl = document.getElementById('score');
+        const deliveredEl = document.getElementById('delivered-count');
+        const ammoEl = document.getElementById('ammo-count');
+        const chaserBadge = document.getElementById('chaser-badge');
+        const chaserDistEl = document.getElementById('chaser-dist');
+        const buffRowEl = document.getElementById('buff-row');
+        const progressBar = document.getElementById('progress-bar');
+        const viewToggleBtn = document.getElementById('view-toggle-btn');
+
+        const dropBtn = document.getElementById('drop-btn');
+        const dropBtnCount = document.getElementById('drop-btn-count');
+
+        const overlay = document.getElementById('overlay');
+        const modalCard = document.getElementById('modal-card');
+        const startBtn = document.getElementById('start-btn');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const starDisplay = document.getElementById('star-display');
+        const infoLegend = document.getElementById('info-legend');
+        const infoRules = document.getElementById('info-rules');
+        const toastEl = document.getElementById('powerup-toast');
+
+        let W = gameContainer.clientWidth || window.innerWidth;
+        let H = gameContainer.clientHeight || window.innerHeight;
+        canvas.width = W;
+        canvas.height = H;
+
+        const PIXELS_PER_METER = 8;
+        const GOAL_METERS = 4000;
+        const TARGET_HOUSES = 35;
+        const CHASER_SPAWN_METERS = 1500;
+        const CHASER_KNOCKBACK_METERS = 20;
+
+        function getPlayerDefaultX() {
+            return W < 500 ? W * 0.24 : W * 0.26;
+        }
+
+        function resizeCanvas() {
+            const oldH = H || window.innerHeight;
+            W = gameContainer.clientWidth || window.innerWidth;
+            H = gameContainer.clientHeight || window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
+
+            if (player) {
+                player.x = getPlayerDefaultX();
+                if (oldH > 0 && oldH !== H) {
+                    const ratio = H / oldH;
+                    player.y *= ratio;
+                    chaser.y *= ratio;
+                    roofs.forEach(r => { r.y *= ratio; });
+                    chimneys.forEach(ch => { ch.y *= ratio; });
+                    obstacles.forEach(ob => {
+                        ob.y *= ratio;
+                        ob.baseY *= ratio;
+                    });
+                    giftPickups.forEach(gp => { gp.y *= ratio; });
+                    powerups.forEach(p => { p.y *= ratio; });
+                    if (portalObj) portalObj.y *= ratio;
+                }
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Toggle between Phone View and Fullscreen View
+        viewToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.body.classList.toggle('phone-mode');
+            const isPhone = document.body.classList.contains('phone-mode');
+            viewToggleBtn.textContent = isPhone ? '🖥️ Fullscreen' : '📱 Phone View';
+            resizeCanvas();
+            setTimeout(resizeCanvas, 320);
+        });
+
+        // Web Audio API Synthesizer
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            if (type === 'jump') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(620, now + 0.14);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            } else if (type === 'powerup') {
+                const notes = [523.25, 659.25, 783.99, 1046.5];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+                    gain.gain.setValueAtTime(0.1, now + idx * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.18);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.05);
+                    osc.stop(now + idx * 0.05 + 0.19);
+                });
+            } else if (type === 'pickup') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(620, now);
+                osc.frequency.exponentialRampToValueAtTime(1180, now + 0.11);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.13);
+            } else if (type === 'drop') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(560, now);
+                osc.frequency.exponentialRampToValueAtTime(240, now + 0.15);
+                gain.gain.setValueAtTime(0.11, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.17);
+            } else if (type === 'chimney') {
+                const notes = [659.25, 783.99, 1046.5, 1318.5];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+                    gain.gain.setValueAtTime(0.13, now + idx * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.22);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.05);
+                    osc.stop(now + idx * 0.05 + 0.23);
+                });
+            } else if (type === 'spooky') {
+                const notes = [440, 415.3, 392, 369.99];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+                    gain.gain.setValueAtTime(0.12, now + idx * 0.09);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.22);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.09);
+                    osc.stop(now + idx * 0.09 + 0.24);
+                });
+            } else if (type === 'hit') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(210, now);
+                osc.frequency.exponentialRampToValueAtTime(65, now + 0.14);
+                gain.gain.setValueAtTime(0.11, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            } else if (type === 'win') {
+                const melody = [659.25, 659.25, 659.25, 659.25, 659.25, 659.25, 659.25, 783.99, 523.25, 587.33, 659.25];
+                const times = [0, 0.16, 0.32, 0.55, 0.71, 0.87, 1.1, 1.26, 1.42, 1.58, 1.76];
+                melody.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + times[idx]);
+                    gain.gain.setValueAtTime(0.14, now + times[idx]);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + times[idx] + 0.22);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + times[idx]);
+                    osc.stop(now + times[idx] + 0.24);
+                });
+            }
+        }
+
+        // Game State
+        let gameRunning = false;
+        let distance = 0;
+        let currentLevel = 1;
+        let gameSpeed = 5.2;
+
+        let presentAmmo = 6;
+        let housesDelivered = 0;
+        let elfTimer = 0;
+
+        // Player Sleigh Object
+        const player = {
+            x: 0,
+            y: 0,
+            vy: 0,
+            width: 58,
+            height: 36,
+            radius: 22,
+            onGround: false,
+            jumpsLeft: 2,
+            scarfWave: 0
+        };
+
+        // 1500m Chaser Object (Ghost Snowman that steals gifts)
+        const chaser = {
+            active: false,
+            warned: false,
+            distBehind: 45 * PIXELS_PER_METER, // Starts 45m behind when spawned
+            x: -200,
+            y: 0,
+            radius: 26,
+            bobPhase: 0
+        };
+
+        let roofs = [];
+        let chimneys = [];
+        let obstacles = [];
+        let giftPickups = [];
+        let powerups = [];
+        let droppedPresents = [];
+        let particles = [];
+        let floatingTexts = [];
+        let bgMountains = [];
+        let snowflakes = [];
+        let portalObj = null;
+
+        function isUIButton(e) {
+            return (
+                e.target === startBtn ||
+                e.target === dropBtn ||
+                dropBtn.contains(e.target) ||
+                e.target === viewToggleBtn ||
+                viewToggleBtn.contains(e.target)
+            );
+        }
+
+        // Responsive High Double Jump
+        function triggerJump() {
+            if (!gameRunning) return;
+            initAudio();
+
+            if (player.onGround || player.jumpsLeft > 0) {
+                if (player.onGround) {
+                    player.vy = -14.2;
+                    player.onGround = false;
+                    player.jumpsLeft = 1;
+                } else {
+                    player.vy = -13.0;
+                    player.jumpsLeft--;
+                }
+                playSound('jump');
+                addBurst(player.x, player.y + 16, '#bae6fd', 9);
+            }
+        }
+
+        // Screen Touch / Click for Jump
+        window.addEventListener('pointerdown', (e) => {
+            if (isUIButton(e)) return;
+            triggerJump();
+        });
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                if (!e.repeat) triggerJump();
+            } else if (e.code === 'KeyD' || e.code === 'ArrowDown' || e.code === 'KeyS') {
+                if (!e.repeat) triggerDropPresent(false);
+            }
+        });
+
+        // Drop Present into Chimney
+        function triggerDropPresent(isAutoElf = false, targetChimney = null) {
+            if (!gameRunning) return;
+            initAudio();
+
+            if (!isAutoElf) {
+                if (presentAmmo <= 0) {
+                    showToast('🎁 လက်ဆောင်ကုန်နေပါပြီ! လမ်းမှာ 🎁 ဘူးလေးတွေ လိုက်ကောက်ပါ!', '#f59e0b');
+                    return;
+                }
+                presentAmmo--;
+                updateUI();
+            }
+
+            playSound('drop');
+            droppedPresents.push({
+                x: player.x,
+                y: player.y + 14,
+                vx: isAutoElf && targetChimney ? (targetChimney.x - player.x) * 0.08 : 1.2,
+                vy: isAutoElf ? 6.5 : 4.5,
+                rotation: 0,
+                homingChimney: targetChimney
+            });
+        }
+
+        dropBtn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            triggerDropPresent(false);
+        });
+
+        function updateUI() {
+            ammoEl.textContent = presentAmmo;
+            dropBtnCount.textContent = `(${presentAmmo})`;
+            if (presentAmmo > 0) {
+                dropBtn.classList.remove('disabled');
+            } else {
+                dropBtn.classList.add('disabled');
+            }
+
+            deliveredEl.textContent = housesDelivered;
+
+            if (chaser.active) {
+                chaserBadge.style.display = 'flex';
+                const metersBehind = Math.max(0, Math.round(chaser.distBehind / PIXELS_PER_METER));
+                chaserDistEl.textContent = metersBehind;
+            } else {
+                chaserBadge.style.display = 'none';
+            }
+        }
+
+        function updateBuffUI() {
+            let html = '';
+            if (elfTimer > 0) {
+                html += `<div class="buff-pill" style="border-color:#10b981;color:#a7f3d0;">🧝 Auto-Elf: ${Math.ceil(elfTimer / 60)}s</div>`;
+            }
+            buffRowEl.innerHTML = html;
+        }
+
+        function showToast(text, borderColor = '#fbbf24') {
+            toastEl.textContent = text;
+            toastEl.style.borderColor = borderColor;
+            toastEl.style.opacity = '1';
+            clearTimeout(showToast.timer);
+            showToast.timer = setTimeout(() => {
+                toastEl.style.opacity = '0';
+            }, 2400);
+        }
+
+        function initBackground() {
+            bgMountains = [];
+            for (let i = 0; i < 8; i++) {
+                bgMountains.push({
+                    x: (W / 6) * i,
+                    w: 220 + Math.random() * 160,
+                    h: 160 + Math.random() * 140,
+                    layer: i % 2 === 0 ? 0.18 : 0.32
+                });
+            }
+            snowflakes = [];
+            for (let i = 0; i < 55; i++) {
+                snowflakes.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    r: 1.5 + Math.random() * 2.6,
+                    vx: -0.6 - Math.random() * 1.3,
+                    vy: 0.7 + Math.random() * 1.5,
+                    alpha: 0.4 + Math.random() * 0.6
+                });
+            }
+        }
+
+        // Very rare Obstacles (5% chance) — includes mid-air floating obstacles!
+        function spawnObstaclesOnRoof(startX, width, y, tier, minStartOffset = 85) {
+            const usableWidth = width - minStartOffset - 60;
+            if (usableWidth < 70) return;
+
+            // 5% chance so obstacles remain uncommon
+            if (Math.random() >= 0.05) return;
+
+            const ox = startX + minStartOffset + Math.random() * (usableWidth * 0.7);
+            if (ox > startX + width - 55) return;
+
+            const roll = Math.random();
+            // 65% of those 3% obstacles are mid-air obstacles (Frost Drone or Floating Ice Crystal)
+            if (roll < 0.65) {
+                const rad = 23;
+                const hoverY = y - 75 - Math.random() * 65; // Floating in the air!
+                obstacles.push({
+                    type: 'frostDrone',
+                    x: ox,
+                    y: hoverY,
+                    baseY: hoverY,
+                    radius: rad,
+                    phase: Math.random() * Math.PI * 2
+                });
+            } else if (roll < 0.85) {
+                const rad = 25;
+                obstacles.push({
+                    type: 'snowman',
+                    x: ox,
+                    y: y - rad * 0.85,
+                    baseY: y - rad * 0.85,
+                    radius: rad
+                });
+            } else {
+                const rad = 24;
+                obstacles.push({
+                    type: 'iceBarrier',
+                    x: ox,
+                    y: y - rad * 0.8,
+                    baseY: y - rad * 0.8,
+                    radius: rad
+                });
+            }
+        }
+
+        function spawnNextRooftop(startX) {
+            const goalPixels = GOAL_METERS * PIXELS_PER_METER;
+            const portalWorldX = player.x + goalPixels;
+            const currentRoofWorldX = distance + startX;
+
+            // If this rooftop approaches 4000m, spawn the final Portal Rooftop!
+            if (portalObj === null && currentRoofWorldX >= portalWorldX - 380) {
+                const prevRoof = roofs[roofs.length - 1];
+                const finalY = prevRoof ? Math.max(H * 0.52, Math.min(H * 0.72, prevRoof.y)) : H * 0.65;
+                const exactPortalScreenX = portalWorldX - distance;
+                const roofStart = Math.min(startX, exactPortalScreenX - 240);
+                const roofWidth = (exactPortalScreenX - roofStart) + 450;
+
+                roofs.push({
+                    x: roofStart,
+                    y: finalY,
+                    w: roofWidth,
+                    isBridge: false,
+                    roofColor: '#7f1d1d',
+                    wallColor: '#1e1b4b'
+                });
+
+                portalObj = {
+                    x: exactPortalScreenX,
+                    y: finalY,
+                    angle: 0
+                };
+                return;
+            }
+
+            if (portalObj !== null) return;
+
+            const isBridge = Math.random() < 0.2;
+            const width = isBridge ? 260 + Math.random() * 110 : 420 + Math.random() * 300;
+
+            const prevRoof = roofs[roofs.length - 1];
+            const prevY = prevRoof ? prevRoof.y : H * 0.68;
+            const minY = Math.max(210, H * 0.42);
+            const maxY = H - 115;
+
+            const stepChange = (Math.random() * 195) - 85;
+            const y = Math.max(minY, Math.min(maxY, prevY + stepChange));
+
+            const roofColors = ['#991b1b', '#1e3a8a', '#065f46', '#581c87', '#7c2d12'];
+            const wallColors = ['#1e293b', '#0f172a', '#334155', '#1e1b4b'];
+
+            const roof = {
+                x: startX,
+                y: y,
+                w: width,
+                isBridge: isBridge,
+                roofColor: roofColors[Math.floor(Math.random() * roofColors.length)],
+                wallColor: wallColors[Math.floor(Math.random() * wallColors.length)]
+            };
+            roofs.push(roof);
+
+            // Spawn Chimneys on Houses (Plenty of chimneys so 35 deliveries are comfortably achievable)
+            if (!isBridge) {
+                const numChimneys = width > 470 ? 2 : 1;
+                for (let c = 0; c < numChimneys; c++) {
+                    const cx = startX + (width / (numChimneys + 1)) * (c + 1) + (Math.random() - 0.5) * 35;
+                    chimneys.push({
+                        x: cx,
+                        y: y,
+                        width: 64,
+                        height: 48,
+                        delivered: false
+                    });
+                }
+            }
+
+            // Spawn Obstacles (5% chance, mostly mid-air)
+            const currentMeters = Math.floor(distance / PIXELS_PER_METER);
+            const tier = Math.min(4, Math.floor(currentMeters / 1000) + 1);
+            spawnObstaclesOnRoof(startX, width, y, tier, 80);
+
+            // Extra chance (5%) for a floating mid-air obstacle over the gap between roofs
+            if (Math.random() < 0.05) {
+                const gapHoverY = y - 85 - Math.random() * 55;
+                obstacles.push({
+                    type: 'frostDrone',
+                    x: startX - 45,
+                    y: gapHoverY,
+                    baseY: gapHoverY,
+                    radius: 22,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            // Spawn Gift Box Pickups (+3 Ammo)
+            const numGifts = 1 + (Math.random() < 0.72 ? 1 : 0);
+            for (let g = 0; g < numGifts; g++) {
+                giftPickups.push({
+                    x: startX + 70 + g * 180 + Math.random() * 70,
+                    y: y - 45 - Math.random() * 85,
+                    radius: 15,
+                    bobPhase: Math.random() * Math.PI * 2
+                });
+            }
+
+            // Spawn Green Elf Power-Up (Auto-Drop)
+            if (Math.random() < 0.45) {
+                powerups.push({
+                    x: startX + width * 0.5 + (Math.random() - 0.5) * 110,
+                    y: y - 65 - Math.random() * 75,
+                    radius: 18,
+                    kind: 'elf',
+                    color: '#10b981',
+                    icon: '🧝',
+                    bobPhase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function resetGame() {
+            resizeCanvas();
+            distance = 0;
+            currentLevel = 1;
+            gameSpeed = 5.2;
+
+            presentAmmo = 6;
+            housesDelivered = 0;
+
+            elfTimer = 0;
+            portalObj = null;
+
+            // Reset Chaser
+            chaser.active = false;
+            chaser.warned = false;
+            chaser.distBehind = 45 * PIXELS_PER_METER;
+            chaser.x = -200;
+            chaser.y = H * 0.5;
+            chaser.bobPhase = 0;
+
+            roofs = [];
+            chimneys = [];
+            obstacles = [];
+            giftPickups = [];
+            powerups = [];
+            droppedPresents = [];
+            particles = [];
+            floatingTexts = [];
+
+            const startRoofY = H * 0.68;
+            player.x = getPlayerDefaultX();
+            player.y = startRoofY - player.height / 2;
+            player.vy = 0;
+            player.onGround = true;
+            player.jumpsLeft = 2;
+
+            roofs.push({
+                x: 0,
+                y: startRoofY,
+                w: 800,
+                isBridge: false,
+                roofColor: '#991b1b',
+                wallColor: '#1e293b'
+            });
+
+            chimneys.push({
+                x: 520,
+                y: startRoofY,
+                width: 64,
+                height: 48,
+                delivered: false
+            });
+
+            spawnObstaclesOnRoof(0, 800, startRoofY, 1, 360);
+
+            let cursorX = 800;
+            for (let i = 0; i < 4; i++) {
+                const gap = 85 + Math.random() * 45;
+                spawnNextRooftop(cursorX + gap);
+                const lastRoof = roofs[roofs.length - 1];
+                cursorX = lastRoof.x + lastRoof.w;
+            }
+
+            updateUI();
+            updateBuffUI();
+            progressBar.style.width = '0%';
+            starDisplay.style.display = 'none';
+            modalCard.classList.remove('win-card');
+            initBackground();
+        }
+
+        function addBurst(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                if (particles.length > 75) particles.shift();
+                const angle = Math.random() * Math.PI * 2;
+                const spd = 1.3 + Math.random() * 3.5;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    r: 2.5 + Math.random() * 3,
+                    color,
+                    alpha: 1
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#fde047') {
+            floatingTexts.push({
+                x,
+                y,
+                text,
+                color,
+                vy: -1.4,
+                alpha: 1
+            });
+        }
+
+        function applyPowerup(p) {
+            addBurst(p.x, p.y, p.color, 14);
+            playSound('powerup');
+
+            if (p.kind === 'elf') {
+                elfTimer = 480;
+                showToast('🧝 Auto-Delivery Elf! မီးခိုးခေါင်းတိုင်တိုင်းကို အလိုအလျောက် 100% ပစ်ထည့်ပေးမယ်!', '#10b981');
+            }
+            updateBuffUI();
+        }
+
+        function handleObstacleCollision() {
+            playSound('hit');
+            addBurst(player.x, player.y, '#ef4444', 20);
+            const meters = Math.min(GOAL_METERS, Math.floor(distance / PIXELS_PER_METER));
+            endGame(meters, '💔 အတားအဆီးနဲ့ တိုက်မိသွားပါပြီဆုရေ!');
+            return true;
+        }
+
+        function update() {
+            // Keep particles & floating texts animating even on win screen
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.alpha -= 0.03;
+                if (pt.alpha <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy;
+                ft.alpha -= 0.025;
+                if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+            }
+
+            if (!gameRunning) return;
+
+            if (elfTimer > 0) {
+                elfTimer--;
+                if (elfTimer % 30 === 0 || elfTimer === 0) updateBuffUI();
+            }
+
+            const meters = Math.min(GOAL_METERS, Math.floor(distance / PIXELS_PER_METER));
+            const newLevel = Math.min(4, Math.floor(meters / 1000) + 1);
+            if (newLevel > currentLevel) {
+                currentLevel = newLevel;
+                playSound('powerup');
+                showToast(`🎄 ${(currentLevel - 1) * 1000}m ရောက်ပြီ! အမြန်နှုန်း Level ${currentLevel} တိုးသွားပါပြီ!`, '#34d399');
+            }
+
+            gameSpeed = 5.2 + (currentLevel - 1) * 0.42;
+            distance += gameSpeed;
+
+            // Activate Chaser at 1500m!
+            if (!chaser.active && meters >= CHASER_SPAWN_METERS) {
+                chaser.active = true;
+                chaser.distBehind = 22 * PIXELS_PER_METER; // Starts 22m behind player so it's visible approaching!
+                chaser.y = player.y;
+                playSound('spooky');
+                showToast('👻 "Don\'t run, I just want a gift!" — သရဲ လိုက်လာပြီ!', '#f43f5e');
+            }
+
+            // Update Chaser Movement & Catch Check
+            if (chaser.active) {
+                chaser.bobPhase += 0.1;
+                // Gradually creeps closer toward the player
+                const creepSpeed = (0.62 + (currentLevel - 1) * 0.08) * 0.50; // 50% slower snowman chase speed
+                chaser.distBehind -= creepSpeed;
+
+                // Show toast when getting close
+                const metersBehind = chaser.distBehind / PIXELS_PER_METER;
+                if (metersBehind < 14 && !chaser.warned) {
+                    chaser.warned = true;
+                    playSound('spooky');
+                    showToast('👻 "Don\'t run, I just want a gift!" နီးလာပြီ! မီးခိုးခေါင်းတိုင်ထဲ လက်ဆောင်မြန်မြန်ပို့ပါ!', '#f43f5e');
+                } else if (metersBehind > 22) {
+                    chaser.warned = false;
+                }
+
+                chaser.x = player.x - chaser.distBehind;
+                chaser.y += (player.y - chaser.y) * 0.08 + Math.sin(chaser.bobPhase) * 1.8;
+
+                updateUI();
+
+                // If Chaser catches up to Santa Bunny
+                if (chaser.distBehind <= 18) {
+                    playSound('hit');
+                    addBurst(player.x, player.y, '#a855f7', 24);
+                    endGame(meters, '👻 "Don\'t run, I just want a gift!" — နှင်းသရဲက လက်ဆောင်တွေ လုသွားပါပြီဆုရေ!');
+                    return;
+                }
+            }
+
+            // Auto-Delivery Elf Helper Check
+            if (elfTimer > 0) {
+                for (let ch of chimneys) {
+                    if (!ch.delivered && !ch.elfTargeted && Math.abs(ch.x - player.x) < 95) {
+                        ch.elfTargeted = true;
+                        triggerDropPresent(true, ch);
+                    }
+                }
+            }
+
+            // Spawn new rooftops ahead
+            const lastRoof = roofs[roofs.length - 1];
+            if (portalObj === null && lastRoof && lastRoof.x + lastRoof.w < W + 420) {
+                const gap = 85 + Math.random() * 50;
+                spawnNextRooftop(lastRoof.x + lastRoof.w + gap);
+            }
+
+            if (portalObj !== null) {
+                portalObj.x -= gameSpeed;
+                portalObj.angle += 0.07;
+            }
+
+            // Player Physics
+            const prevBottom = player.y + player.height / 2;
+
+            if (!player.onGround) {
+                player.vy = Math.min(player.vy + 0.48, 13.0);
+            }
+
+            player.y += player.vy;
+            player.scarfWave += 0.25;
+
+            // Check landing on rooftops
+            player.onGround = false;
+            const currentBottom = player.y + player.height / 2;
+
+            for (let r of roofs) {
+                if (player.x + 22 > r.x && player.x - 22 < r.x + r.w) {
+                    if (prevBottom <= r.y + 22 && currentBottom >= r.y - 2 && player.vy >= 0) {
+                        player.y = r.y - player.height / 2;
+                        player.vy = 0;
+                        player.onGround = true;
+                        player.jumpsLeft = 2;
+                        break;
+                    }
+                }
+            }
+
+            // Prevent flying above top HUD
+            if (player.y < 80) {
+                player.y = 80;
+                if (player.vy < 0) player.vy = 0;
+            }
+
+            // Pitfall check
+            if (player.y > H + 35) {
+                playSound('hit');
+                endGame(meters, '❄️ အိမ်ခေါင်မိုးကြား ချောက်ထဲ ပြုတ်ကျသွားပါပြီဆုရေ!');
+                return;
+            }
+
+            // Update Background
+            bgMountains.forEach(m => {
+                m.x -= gameSpeed * m.layer;
+                if (m.x + m.w < -40) m.x = W + 40;
+            });
+
+            snowflakes.forEach(s => {
+                s.x += s.vx - gameSpeed * 0.2;
+                s.y += s.vy;
+                if (s.x < -10) s.x = W + 10;
+                if (s.y > H + 10) s.y = -10;
+            });
+
+            // Scroll Rooftops & Chimneys
+            for (let i = roofs.length - 1; i >= 0; i--) {
+                roofs[i].x -= gameSpeed;
+                if (roofs[i].x + roofs[i].w < -150) roofs.splice(i, 1);
+            }
+
+            for (let i = chimneys.length - 1; i >= 0; i--) {
+                chimneys[i].x -= gameSpeed;
+                if (chimneys[i].x < -100) chimneys.splice(i, 1);
+            }
+
+            // Update Dropped Presents & Chimney Hits
+            for (let i = droppedPresents.length - 1; i >= 0; i--) {
+                const dp = droppedPresents[i];
+                if (dp.homingChimney && !dp.homingChimney.delivered) {
+                    dp.x += (dp.homingChimney.x - dp.x) * 0.22;
+                    dp.y += dp.vy;
+                } else {
+                    dp.x += dp.vx - gameSpeed * 0.35;
+                    dp.vy += 0.32;
+                    dp.y += dp.vy;
+                }
+                dp.rotation += 0.1;
+
+                let delivered = false;
+                for (let ch of chimneys) {
+                    if (
+                        !ch.delivered &&
+                        Math.abs(dp.x - ch.x) < ch.width * 0.65 &&
+                        dp.y >= ch.y - ch.height - 15 &&
+                        dp.y <= ch.y + 15
+                    ) {
+                        ch.delivered = true;
+                        housesDelivered++;
+                        playSound('chimney');
+                        addBurst(ch.x, ch.y - ch.height, '#fde047', 16);
+
+                        // Knock back the Ghost Snowman by 50 meters when a gift is delivered!
+                        if (chaser.active) {
+                            chaser.distBehind += CHASER_KNOCKBACK_METERS * PIXELS_PER_METER;
+                            addBurst(Math.max(30, chaser.x), chaser.y, '#38bdf8', 14);
+                            addFloatingText(
+                                ch.x,
+                                ch.y - ch.height - 22,
+                                `🎄 ပို့ပြီး! (${housesDelivered}/${TARGET_HOUSES}) | 👻 -20m နောက်ဆုတ်!`,
+                                '#fde047'
+                            );
+                        } else {
+                            addFloatingText(
+                                ch.x,
+                                ch.y - ch.height - 20,
+                                `🎄 ပို့ပြီး! (${housesDelivered}/${TARGET_HOUSES})`,
+                                '#fde047'
+                            );
+                        }
+
+                        updateUI();
+                        delivered = true;
+                        break;
+                    }
+                }
+
+                if (delivered || dp.y > H + 30) {
+                    droppedPresents.splice(i, 1);
+                }
+            }
+
+            // Update Gift Pickups (+3 Ammo)
+            for (let i = giftPickups.length - 1; i >= 0; i--) {
+                const gp = giftPickups[i];
+                gp.x -= gameSpeed;
+                gp.bobPhase += 0.09;
+
+                if (Math.hypot(player.x - gp.x, player.y - gp.y) < player.radius + gp.radius + 6) {
+                    playSound('pickup');
+                    presentAmmo += 3;
+                    updateUI();
+                    addBurst(gp.x, gp.y, '#fbbf24', 8);
+                    addFloatingText(gp.x, gp.y - 12, '+3 🎁 လက်ဆောင်', '#fde047');
+                    giftPickups.splice(i, 1);
+                    continue;
+                }
+                if (gp.x < -70) giftPickups.splice(i, 1);
+            }
+
+            // Update Power-Ups (Elf Only)
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.x -= gameSpeed;
+                p.bobPhase += 0.08;
+
+                if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius + 6) {
+                    applyPowerup(p);
+                    powerups.splice(i, 1);
+                    continue;
+                }
+                if (p.x < -80) powerups.splice(i, 1);
+            }
+
+            // Update Obstacles & Check Player Collision
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const ob = obstacles[i];
+                ob.x -= gameSpeed;
+                if (ob.type === 'frostDrone') {
+                    ob.phase += 0.08;
+                    ob.y = ob.baseY + Math.sin(ob.phase) * 18;
+                }
+
+                const dist = Math.hypot(player.x - ob.x, player.y - ob.y);
+                if (dist < player.radius + ob.radius - 4) {
+                    handleObstacleCollision();
+                    return;
+                }
+
+                if (ob && ob.x < -100) obstacles.splice(i, 1);
+            }
+
+            scoreEl.textContent = meters;
+            progressBar.style.width = `${Math.min(100, (meters / GOAL_METERS) * 100)}%`;
+
+            // Trigger Win at exact 4000m Portal Gate!
+            if ((portalObj !== null && portalObj.x <= player.x) || meters >= GOAL_METERS) {
+                winGame();
+            }
+        }
+
+        function winGame() {
+            gameRunning = false;
+            playSound('win');
+            scoreEl.textContent = GOAL_METERS;
+            progressBar.style.width = '100%';
+
+            // Confetti burst celebration
+            addBurst(W * 0.3, H * 0.4, '#ec4899', 22);
+            addBurst(W * 0.7, H * 0.4, '#fbbf24', 22);
+            addBurst(W * 0.5, H * 0.3, '#38bdf8', 22);
+
+            let stars = 0;
+            if (housesDelivered >= 35) stars = 3;
+            else if (housesDelivered >= 22) stars = 2;
+            else if (housesDelivered >= 10) stars = 1;
+
+            let starText = '☆☆☆';
+            if (stars === 3) {
+                starText = '⭐⭐⭐';
+            } else if (stars === 2) {
+                starText = '⭐⭐☆';
+            } else if (stars === 1) {
+                starText = '⭐☆☆';
+            }
+
+            modalCard.classList.add('win-card');
+            infoLegend.style.display = 'none';
+            infoRules.style.display = 'none';
+
+            starDisplay.style.display = 'block';
+            starDisplay.textContent = starText;
+
+            modalTitle.textContent = '🎊 You Win! ပန်းတိုင်ရောက်ပြီ! 🎅';
+            modalDesc.innerHTML =
+                `အိမ်ခေါင်မိုး <b>${housesDelivered} / ${TARGET_HOUSES} လုံး</b> လက်ဆောင်ပို့နိုင်ခဲ့ပြီး 4000m Portal တံခါးကြီးထဲ အောင်မြင်စွာ ဝင်ရောက်နိုင်ခဲ့ပါပြီ! 🎄🎁<br>` +
+                (stars === 3 ? '<b style="color:#be185d;">အိမ် 35 လုံးပြည့်အောင် ပို့နိုင်လို့ 3 Stars အပြည့်ရရှိပါတယ်! 👑💖</b>' : '');
+
+            startBtn.textContent = '🛷 Play Again';
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+        }
+
+        function endGame(meters, message) {
+            gameRunning = false;
+            modalCard.classList.remove('win-card');
+            infoLegend.style.display = 'grid';
+            infoRules.style.display = 'block';
+            starDisplay.style.display = 'none';
+            modalTitle.textContent = message;
+            modalDesc.innerHTML = `<b>${meters}m / 4000m</b> အထိ ရောက်ခဲ့ပြီး အိမ် <b>${housesDelivered} / ${TARGET_HOUSES} လုံး</b> လက်ဆောင်ပို့နိုင်ခဲ့ပါတယ်!<br>အိမ်ခေါင်မိုးတွေပေါ် ခုန်ကျော်ပြီး 4000m Portal တံခါးကြီးဆီ ရောက်အောင် ထပ်ကြိုးစားကြမယ်ဆု။`;
+            startBtn.textContent = '🔄 Play Again';
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+        }
+
+        function drawBackground() {
+            const moonX = W * 0.78;
+            const moonY = H * 0.22;
+            const grad = ctx.createRadialGradient(moonX, moonY, 12, moonX, moonY, 160);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, 'rgba(56, 189, 248, 0.45)');
+            grad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, 160, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, 40, 0, Math.PI * 2);
+            ctx.fill();
+
+            bgMountains.forEach(m => {
+                ctx.fillStyle = m.layer < 0.25 ? 'rgba(15, 35, 66, 0.6)' : 'rgba(10, 25, 48, 0.85)';
+                ctx.beginPath();
+                ctx.moveTo(m.x, H);
+                ctx.lineTo(m.x + m.w / 2, H - m.h);
+                ctx.lineTo(m.x + m.w, H);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            ctx.fillStyle = '#ffffff';
+            snowflakes.forEach(s => {
+                ctx.save();
+                ctx.globalAlpha = s.alpha;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawRooftops() {
+            roofs.forEach(r => {
+                ctx.save();
+                if (r.isBridge) {
+                    ctx.fillStyle = '#78350f';
+                    ctx.strokeStyle = '#bae6fd';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.roundRect(r.x, r.y, r.w, 18, 6);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.fillRect(r.x + 4, r.y, r.w - 8, 6);
+                } else {
+                    ctx.fillStyle = r.wallColor;
+                    ctx.fillRect(r.x + 8, r.y + 14, r.w - 16, H - r.y);
+
+                    ctx.fillStyle = '#fef08a';
+                    for (let wx = r.x + 38; wx < r.x + r.w - 50; wx += 75) {
+                        for (let wy = r.y + 42; wy < H - 40; wy += 65) {
+                            ctx.beginPath();
+                            ctx.roundRect(wx, wy, 28, 34, 4);
+                            ctx.fill();
+                        }
+                    }
+
+                    ctx.fillStyle = r.roofColor;
+                    ctx.fillRect(r.x, r.y, r.w, 22);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#bae6fd';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(r.x - 4, r.y - 6, r.w + 8, 16, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    const lightColors = ['#ef4444', '#22c55e', '#facc15', '#38bdf8'];
+                    let idx = 0;
+                    for (let lx = r.x + 16; lx < r.x + r.w - 16; lx += 26) {
+                        ctx.fillStyle = lightColors[idx % lightColors.length];
+                        ctx.beginPath();
+                        ctx.arc(lx, r.y + 16, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        idx++;
+                    }
+                }
+                ctx.restore();
+            });
+        }
+
+        function drawChimneys() {
+            chimneys.forEach(ch => {
+                ctx.save();
+                ctx.translate(ch.x, ch.y);
+
+                if (!ch.delivered && Math.abs(ch.x - player.x) < 120) {
+                    ctx.strokeStyle = 'rgba(250, 204, 21, 0.6)';
+                    ctx.setLineDash([6, 6]);
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -ch.height - 10);
+                    ctx.lineTo(0, -240);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                ctx.fillStyle = ch.delivered ? '#15803d' : '#991b1b';
+                ctx.strokeStyle = ch.delivered ? '#4ade80' : '#fca5a5';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(-ch.width / 2, -ch.height, ch.width, ch.height, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.roundRect(-ch.width / 2 - 5, -ch.height - 7, ch.width + 10, 12, 6);
+                ctx.fill();
+
+                ctx.font = 'bold 12.5px Fredoka';
+                ctx.textAlign = 'center';
+                if (ch.delivered) {
+                    ctx.fillStyle = '#fde047';
+                    ctx.fillText('🎄 ပို့ပြီး!', 0, -ch.height - 14);
+                } else {
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillText('🎁 DROP', 0, -ch.height - 14);
+                }
+
+                ctx.restore();
+            });
+        }
+
+        function drawPortalGate() {
+            if (portalObj === null) return;
+            ctx.save();
+            ctx.translate(portalObj.x, portalObj.y);
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(-68, -16, 136, 16, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            const archGrad = ctx.createLinearGradient(-55, -190, 55, 0);
+            archGrad.addColorStop(0, '#c084fc');
+            archGrad.addColorStop(0.5, '#38bdf8');
+            archGrad.addColorStop(1, '#f43f5e');
+
+            ctx.strokeStyle = archGrad;
+            ctx.lineWidth = 14;
+            ctx.beginPath();
+            ctx.arc(0, -85, 55, Math.PI, 0, false);
+            ctx.lineTo(55, -16);
+            ctx.moveTo(-55, -85);
+            ctx.lineTo(-55, -16);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(0, -78);
+            const vortexGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 52);
+            vortexGrad.addColorStop(0, '#ffffff');
+            vortexGrad.addColorStop(0.35, '#38bdf8');
+            vortexGrad.addColorStop(0.7, '#9333ea');
+            vortexGrad.addColorStop(1, 'rgba(88, 28, 135, 0.1)');
+
+            ctx.fillStyle = vortexGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 44, 62, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.rotate(portalObj.angle);
+            ctx.strokeStyle = 'rgba(254, 240, 138, 0.85)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 8]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 32, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.rotate(-portalObj.angle * 1.8);
+            ctx.strokeStyle = 'rgba(103, 232, 249, 0.9)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            ctx.fillStyle = '#fef08a';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 4;
+            ctx.font = 'bold 18px Fredoka';
+            ctx.textAlign = 'center';
+            ctx.strokeText('🌀 4000m PORTAL', 0, -162);
+            ctx.fillText('🌀 4000m PORTAL', 0, -162);
+
+            ctx.restore();
+        }
+
+        function drawPickups() {
+            giftPickups.forEach(gp => {
+                const y = gp.y + Math.sin(gp.bobPhase) * 5;
+                const r = gp.radius;
+                ctx.save();
+                ctx.translate(gp.x, y);
+
+                ctx.fillStyle = '#ef4444';
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(-r, -r, r * 2, r * 2, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(-3, -r, 6, r * 2);
+                ctx.fillRect(-r, -3, r * 2, 6);
+                ctx.restore();
+            });
+
+            powerups.forEach(p => {
+                const y = p.y + Math.sin(p.bobPhase) * 5;
+                ctx.save();
+                ctx.translate(p.x, y);
+
+                ctx.fillStyle = p.color + '44';
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius + 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = p.color;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.font = '18px Fredoka';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.icon, 0, 1);
+                ctx.restore();
+            });
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(ob => {
+                ctx.save();
+                ctx.translate(ob.x, ob.y);
+                const r = ob.radius;
+
+                if (ob.type === 'snowman') {
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.strokeStyle = '#93c5fd';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, r * 0.2, r * 0.72, 0, Math.PI * 2);
+                    ctx.arc(0, -r * 0.45, r * 0.52, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(-5, -r * 0.52, 3, 0, Math.PI * 2);
+                    ctx.arc(5, -r * 0.52, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -r * 0.44);
+                    ctx.lineTo(-11, -r * 0.38);
+                    ctx.lineTo(0, -r * 0.32);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (ob.type === 'iceBarrier') {
+                    ctx.fillStyle = '#0284c7';
+                    ctx.strokeStyle = '#e0f2fe';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-r, r * 0.8);
+                    ctx.lineTo(-r * 0.5, -r * 0.9);
+                    ctx.lineTo(0, r * 0.2);
+                    ctx.lineTo(r * 0.5, -r);
+                    ctx.lineTo(r, r * 0.8);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (ob.type === 'frostDrone') {
+                    // Mid-air Obstacle with glowing aura
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(-6, -2, 4, 0, Math.PI * 2);
+                    ctx.arc(6, -2, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            });
+        }
+
+        // Draw the 1500m Chaser (Ghost Snowman + Speech Bubble "Don't run, I just want a gift")
+        function drawChaser() {
+            if (!chaser.active) return;
+
+            const metersBehind = Math.max(0, Math.round(chaser.distBehind / PIXELS_PER_METER));
+
+            // If Chaser is off-screen to the left, show an edge indicator + speech bubble when close
+            if (chaser.x < -30) {
+                ctx.save();
+                const indicatorY = Math.max(130, Math.min(H - 90, chaser.y));
+                ctx.fillStyle = 'rgba(225, 29, 72, 0.92)';
+                ctx.strokeStyle = '#fda4af';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(10, indicatorY - 22, 92, 44, 12);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px Fredoka';
+                ctx.textAlign = 'center';
+                ctx.fillText(`👻 ${metersBehind}m`, 56, indicatorY - 3);
+                ctx.font = 'bold 10px Fredoka';
+                ctx.fillStyle = '#fde047';
+                ctx.fillText('လိုက်လာနေပြီ!', 56, indicatorY + 13);
+
+                // If within 30m, show the speech bubble even near the left edge
+                if (metersBehind <= 30) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#ec4899';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.roundRect(108, indicatorY - 18, 200, 34, 12);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#be185d';
+                    ctx.font = 'bold 11.5px Fredoka';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("Don't run, I just want a gift! 🎁", 208, indicatorY + 3);
+                }
+                ctx.restore();
+                return;
+            }
+
+            // Draw Ghost Snowman on screen
+            ctx.save();
+            ctx.translate(chaser.x, chaser.y);
+
+            // Spooky Aura
+            const aura = ctx.createRadialGradient(0, 0, 6, 0, 0, 44);
+            aura.addColorStop(0, 'rgba(192, 132, 252, 0.75)');
+            aura.addColorStop(1, 'rgba(192, 132, 252, 0)');
+            ctx.fillStyle = aura;
+            ctx.beginPath();
+            ctx.arc(0, 0, 44, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ghostly Snowman Lower & Upper Body
+            ctx.fillStyle = '#f8fafc';
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, 10, 20, 0, Math.PI * 2);
+            ctx.arc(0, -12, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Glowing Eyes
+            ctx.fillStyle = '#e11d48';
+            ctx.beginPath();
+            ctx.arc(4, -15, 3.2, 0, Math.PI * 2);
+            ctx.arc(11, -15, 3.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Reaching Arms trying to grab a gift
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(12, 2);
+            ctx.lineTo(28, -4 + Math.sin(chaser.bobPhase * 2) * 5);
+            ctx.stroke();
+
+            // Speech Bubble above Chaser: "Don't run, I just want a gift!"
+            const bubbleW = 205;
+            const bubbleH = 34;
+            const bx = Math.max(12 - chaser.x, -45);
+            const by = -68;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+            ctx.strokeStyle = '#e11d48';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bubbleW, bubbleH, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            // Bubble Pointer
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+            ctx.beginPath();
+            ctx.moveTo(0, by + bubbleH);
+            ctx.lineTo(10, by + bubbleH);
+            ctx.lineTo(4, by + bubbleH + 9);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#be185d';
+            ctx.font = 'bold 11.5px Fredoka';
+            ctx.textAlign = 'center';
+            ctx.fillText("Don't run, I just want a gift! 🎁", bx + bubbleW / 2, by + 21);
+
+            ctx.restore();
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+
+            const tilt = player.onGround ? 0 : Math.max(-0.26, Math.min(0.26, player.vy * 0.022));
+            ctx.rotate(tilt);
+
+            // Golden Sleigh Runners (Skis)
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(-26, 16);
+            ctx.lineTo(24, 16);
+            ctx.quadraticCurveTo(32, 16, 34, 8);
+            ctx.stroke();
+
+            // Red Santa Sleigh Body
+            ctx.fillStyle = '#dc2626';
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-24, -2, 46, 16, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            // Cute Santa Bunny sitting in Sleigh
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#bae6fd';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(2, -10, 13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Bunny Ears
+            ctx.beginPath();
+            ctx.ellipse(-4, -23, 3.5, 8, -0.2, 0, Math.PI * 2);
+            ctx.ellipse(6, -23, 3.5, 8, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Santa Hat
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(-8, -18);
+            ctx.lineTo(10, -18);
+            ctx.lineTo(-2, -30);
+            ctx.closePath();
+            ctx.fill();
+
+            // 🧝 Auto-Delivery Elf Helper floating above Sleigh
+            if (elfTimer > 0) {
+                const ey = -38 + Math.sin(player.scarfWave) * 5;
+                ctx.fillStyle = '#10b981';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(-18, ey, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fef08a';
+                ctx.font = 'bold 10px Fredoka';
+                ctx.textAlign = 'center';
+                ctx.fillText('🧝ELF', -18, ey - 14);
+            }
+
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            drawBackground();
+            drawRooftops();
+            drawChimneys();
+            drawPortalGate();
+            drawPickups();
+            drawObstacles();
+
+            droppedPresents.forEach(dp => {
+                ctx.save();
+                ctx.translate(dp.x, dp.y);
+                ctx.rotate(dp.rotation);
+                ctx.fillStyle = '#ef4444';
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(-10, -10, 20, 20, 4);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(-2.5, -10, 5, 20);
+                ctx.fillRect(-10, -2.5, 20, 5);
+                ctx.restore();
+            });
+
+            drawPlayer();
+            drawChaser();
+
+            particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.alpha);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, ft.alpha);
+                ctx.fillStyle = ft.color;
+                ctx.font = 'bold 14.5px Fredoka';
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        startBtn.addEventListener('click', () => {
+            initAudio();
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+            resetGame();
+            gameRunning = true;
+        });
+
+        window.onload = function () {
+            initBackground();
+            resetGame();
+            loop();
+        };
+    </script>
+</body>
+
+</html>
